@@ -1,7 +1,7 @@
-<name> -- <function>
-<version>, <date>
+screenfetch -- prints information about the host machine
+1.0, June 19th 2017
 
-Copyright (C) <date> Szymon "pi_pi3" Walter
+Copyright (C) 2017 Szymon "pi_pi3" Walter
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
