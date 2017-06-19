@@ -7,7 +7,7 @@ if [ "$USER" != "root" ]; then
 fi
 
 usage() {
-    echo "Usage: $0 <install|uninstall|deps|help>"
+    echo "Usage: $0 <i[nstall]|u[ninstall]|d[eps]|h[elp]>"
 }
 
 deps() {
@@ -50,17 +50,15 @@ uninstall() {
 }
 
 case $1 in
-    deps)
+    d | deps)
         deps;;
-    install)
+    i | install)
         install;;
-    uninstall)
+    u | uninstall)
         uninstall;;
-    '-h')
+    h | help)
         usage;;
-    '--help')
-        usage;;
-    'help')
+    '-h' | '--help')
         usage;;
     *)
         install;;
