@@ -98,9 +98,7 @@ if [[ -n $DISPLAY ]]; then
     rhs=${rhs}"\n"$(printc "WM" $window_manager $colour)
 fi
 
-if [[ -z $lhs ]]; then
-    print -P $rhs
-else
+if [[ -n $lhs ]] && [[ -f $lhs ]]; then
     lhs=$(cat $lhs)
     while [[ -n $lhs ]] || [[ -n $rhs ]]; do
         if [[ -n $skip ]] && [[ $skip -ge 1 ]]; then
@@ -118,4 +116,6 @@ else
             rhs=$(echo $rhs | tail -n$(echo "$(echo $rhs | wc -l)-1" | bc))
         fi
     done
+else
+    print -P $rhs
 fi
