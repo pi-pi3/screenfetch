@@ -1,0 +1,121 @@
+#!/bin/zsh
+
+version='screenfetch 1.0'
+usage="Usage: $0 [-hv] [-l LHS] [-n NAME] [-c COLOUR]"
+
+usage() {
+    print $usage
+    exit 1
+}
+
+version() {
+    print $version
+    exit 1
+}
+
+printc() {
+    label=$1
+    text=$2
+    colour=$3
+    if [[ -n $colour ]]; then
+        print -P "%F{$colour}$label:%f $text"
+    else
+        print "$label: $text"
+    fi
+}
+
+colour='yellow'
+lhs='/usr/share/screenfetch'
+
+while getopts "l:n:c:s:hv" arg; do
+    case $arg in
+        h)
+            usage;;
+        v)
+            version;;
+        l)
+            lhs=$OPTARG;;
+        n)
+            os_name=$OPTARG;;
+        c)
+            colour=$OPTARG;;
+        s)
+            skip=$OPTARG;;
+        *)
+            usage;;
+    esac
+done
+
+if [ -z $os_name ]; then
+    os_name=$(uname -o)
+fi
+kernel_name=$(print $CPUTYPE $(uname) $(uname -r))
+uptime=$(uptime | sed 's/.*up\ *\([^,]*\),.*/\1/')
+packages=$(pacman -Q | wc -l)
+shell=$($SHELL --version)
+
+cpu_name=$(cat /proc/cpuinfo | grep -i -e 'model name' | head -n1 | sed 's/model name\s*:\s*\(.*\)\ *@.*/\1/')
+cpu_cores=$(cat /proc/cpuinfo | grep -i -e 'processor' | wc -l)
+
+# frequency taken from the first core only
+cpu_freq=$(cat /proc/cpuinfo | grep -i -e 'cpu MHz' | head -n1 | sed 's/cpu MHz\s*:\s*\(.*\)/\1/')
+# MHz to GHz
+cpu_freq=$(print "scale=1; $cpu_freq/1000" | bc)
+
+# temperature taken from the first core only
+cpu_temp=$(sensors | grep -i -e 'Core 0' | head -n1 | sed 's/Core 0:[^0-9]*+\([^CF]*\(C\|F\)\).*/\1/')
+
+memory=$(free -m | head -n2 | tail -n1 | sed 's/Mem:\s*\(\w*\)\s*\(\w*\).*/\2MiB \/ \1MiB/')
+
+rhs=''
+
+if [[ -n $colour ]]; then
+    rhs=${rhs}"%F{$colour}$USER%f@%F{$colour}$HOST%f"
+else
+    rhs=${rhs}"$USER@$HOST"
+fi
+rhs=${rhs}"\n"$(printc "OS" $os_name $colour)
+rhs=${rhs}"\n"$(printc "Kernel" $kernel_name $colour)
+rhs=${rhs}"\n"$(printc "Uptime" $uptime $colour)
+rhs=${rhs}"\n"$(printc "Packages" $packages $colour)
+rhs=${rhs}"\n"$(printc "Shell" $shell $colour)
+
+rhs=${rhs}"\n"$(printc "CPU" "$cpu_name @ ${cpu_cores}x${cpu_freq}GHz [$cpu_temp]" $colour)
+rhs=${rhs}"\n"$(printc "RAM" $memory $colour)
+
+if [[ -n $DISPLAY ]]; then
+    gpu_name=$(glxinfo | grep -i -e 'OpenGL renderer string' | sed 's/OpenGL renderer string:\s*//')
+    screen0_resolution=$(xrandr | head -n1 | sed 's/.*current \(.*x.*\),.*/\1/')
+    window_manager=$(xprop -root -notype | grep -i -e '^_NET_WM_NAME' | sed 's/_NET_WM_NAME = "\(.*\)"/\1/')
+
+    rhs=${rhs}"\n"$(printc "GPU" $gpu_name $colour)
+    rhs=${rhs}"\n"$(printc "Resolution" $screen0_resolution $colour)
+
+    if [[ -n $XDG_CURRENT_DESKTOP ]]; then
+        rhs=${rhs}"\n"$(printc "DM" $XDG_CURRENT_DESKTOP $colour)
+    fi
+
+    rhs=${rhs}"\n"$(printc "WM" $window_manager $colour)
+fi
+
+if [[ -z $lhs ]]; then
+    print -P $rhs
+else
+    lhs=$(cat $lhs)
+    while [[ -n $lhs ]] || [[ -n $rhs ]]; do
+        if [[ -n $skip ]] && [[ $skip -ge 1 ]]; then
+            skip=$(echo "$skip-1" | bc)
+            l=$(echo $lhs | head -n1)
+            print -P $l
+            # remove first line
+            lhs=$(echo $lhs | tail -n$(echo "$(echo $lhs | wc -l)-1" | bc))
+        else
+            l=$(echo $lhs | head -n1)
+            r=$(echo $rhs | head -n1)
+            print -P $l $r
+            # remove first line
+            lhs=$(echo $lhs | tail -n$(echo "$(echo $lhs | wc -l)-1" | bc))
+            rhs=$(echo $rhs | tail -n$(echo "$(echo $rhs | wc -l)-1" | bc))
+        fi
+    done
+fi
