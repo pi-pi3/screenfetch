@@ -49,7 +49,7 @@ done
 if [ -z $os_name ]; then
     os_name=$(uname -o)
 fi
-kernel_name=$(print $CPUTYPE $(uname) $(uname -r))
+kernel_name=$(print $CPUTYPE $(uname -sr))
 uptime=$(uptime | sed 's/.*up\ *\([^,]*\),.*/\1/')
 packages=$(pacman -Q | wc -l)
 shell=$($SHELL --version)
