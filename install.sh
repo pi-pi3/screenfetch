@@ -41,14 +41,12 @@ install() {
     fi
     deps
     
-    cp $dir/lhs /usr/share/screenfetch
     cp $dir/screenfetch /bin/screenfetch
     echo "Successfully installed"
 }
 
 uninstall() {
     echo "Uninstalling screenfetch"
-    rm /usr/share/screenfetch
     rm /bin/screenfetch
     echo "Successfully uninstalled"
 }
@@ -60,9 +58,7 @@ case $1 in
         install;;
     u | uninstall)
         uninstall;;
-    h | help)
-        usage;;
-    '-h' | '--help')
+    h | help | '-h' | '--help')
         usage;;
     *)
         install;;

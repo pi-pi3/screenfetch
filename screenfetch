@@ -1,7 +1,25 @@
 #!/bin/zsh
 
-version='screenfetch 1.0'
-usage="Usage: $0 [-hv] [-l LHS] [-n NAME] [-c COLOUR]"
+if [[ $0 = $(which screenfetch) ]]; then
+    0='screenfetch'
+fi
+
+version='screenfetch 1.1'
+usage="Usage: $0 [options] 
+
+Options:
+  -a ART          - use ART as the lhs art, where ART is an executable
+  -O OS_NAME      - use OS_NAME as the OS label
+  -c COLOUR       - use COLOUR for the information colour
+  -y YOFFSET      - offset information by YOFFSET
+  -S SCRNSHOTTER  - take a screenshot with SCRNSHOTTER
+  -s              - take a screenshot
+  -n              - don't display art
+  -N              - don't display colour
+  -L              - display only art
+  -p              - portrait mode (prints art above info)
+  -h              - prints this message and quits
+  -v              - prints version and quits"
 
 usage() {
     print $usage
@@ -17,30 +35,65 @@ printc() {
     label=$1
     text=$2
     colour=$3
-    if [[ -n $colour ]]; then
+    if [[ $nocolour -eq 0 ]] && [[ -n $colour ]]; then
         print -P "%F{$colour}$label:%f $text"
     else
         print "$label: $text"
     fi
 }
 
-colour='yellow'
-lhs='/usr/share/screenfetch'
+# TODO
+verbose=0
 
-while getopts "l:n:c:s:hv" arg; do
+nocolour=0
+noart=0
+artonly=0
+screenshot=0
+portrait=0
+
+screenshotutil='scrot'
+colour='yellow'
+infcolour=''
+art='%B%F{yellow}GNU/Linux mah freedo%f%b
+%B%F{yellow}m GNU/Linux mah free%f%b
+%B%F{yellow}dom GNU/Linux mah fr%f%b
+%B%F{yellow}eedom GNU/Linux mah %f%b
+%B%F{yellow}freedom GNU/Linux ma%f%b
+%B%F{yellow}h freedom GNU/Linux %f%b
+%B%F{yellow}mah freedom GNU/Linu%f%b
+%B%F{yellow}x mah freedom GNU/Li%f%b
+%B%F{yellow}nux mah freedom GNU/%f%b
+%B%F{yellow}Linux mah freedom GN%f%b
+%B%F{yellow}U/Linux mah freedom %f%b'
+
+while getopts "a:O:c:y:S:nNLwpshVv" arg; do
     case $arg in
         h)
             usage;;
-        v)
+        V)
             version;;
-        l)
-            lhs=$OPTARG;;
+        v)
+            verbose=1;;
         n)
+            noart=1;;
+        N)
+            nocolour=1;;
+        L)
+            artonly=1;;
+        p)
+            portrait=1;;
+        s)
+            screenshot=1;;
+        S)
+            screenshotutil=$OPTARG;;
+        a)
+            art=$OPTARG;;
+        O)
             os_name=$OPTARG;;
         c)
             colour=$OPTARG;;
-        s)
-            skip=$OPTARG;;
+        y)
+            y=$OPTARG;;
         *)
             usage;;
     esac
@@ -67,55 +120,76 @@ cpu_temp=$(sensors | grep -i -e 'Core 0' | head -n1 | sed 's/Core 0:[^0-9]*+\([^
 
 memory=$(free -m | head -n2 | tail -n1 | sed 's/Mem:\s*\(\w*\)\s*\(\w*\).*/\2MiB \/ \1MiB/')
 
-rhs=''
+info=''
 
-if [[ -n $colour ]]; then
-    rhs=${rhs}"%F{$colour}$USER%f@%F{$colour}$HOST%f"
+if [[ $nocolour -eq 0 ]] && [[ -n $colour ]]; then
+    info=${info}"%F{$colour}$USER%f@%F{$colour}$HOST%f"
 else
-    rhs=${rhs}"$USER@$HOST"
+    info=${info}"$USER@$HOST"
 fi
-rhs=${rhs}"\n"$(printc "OS" $os_name $colour)
-rhs=${rhs}"\n"$(printc "Kernel" $kernel_name $colour)
-rhs=${rhs}"\n"$(printc "Uptime" $uptime $colour)
-rhs=${rhs}"\n"$(printc "Packages" $packages $colour)
-rhs=${rhs}"\n"$(printc "Shell" $shell $colour)
+info=${info}"\n"$(printc "OS" $os_name $colour)
+info=${info}"\n"$(printc "Kernel" $kernel_name $colour)
+info=${info}"\n"$(printc "Uptime" $uptime $colour)
+info=${info}"\n"$(printc "Packages" $packages $colour)
+info=${info}"\n"$(printc "Shell" $shell $colour)
 
-rhs=${rhs}"\n"$(printc "CPU" "$cpu_name @ ${cpu_cores}x${cpu_freq}GHz [$cpu_temp]" $colour)
-rhs=${rhs}"\n"$(printc "RAM" $memory $colour)
+info=${info}"\n"$(printc "CPU" "$cpu_name @ ${cpu_cores}x${cpu_freq}GHz [$cpu_temp]" $colour)
+info=${info}"\n"$(printc "RAM" $memory $colour)
 
 if [[ -n $DISPLAY ]]; then
     gpu_name=$(glxinfo | grep -i -e 'OpenGL renderer string' | sed 's/OpenGL renderer string:\s*//')
     screen0_resolution=$(xrandr | head -n1 | sed 's/.*current \(.*x.*\),.*/\1/')
     window_manager=$(xprop -root -notype | grep -i -e '^_NET_WM_NAME' | sed 's/_NET_WM_NAME = "\(.*\)"/\1/')
 
-    rhs=${rhs}"\n"$(printc "GPU" $gpu_name $colour)
-    rhs=${rhs}"\n"$(printc "Resolution" $screen0_resolution $colour)
+    info=${info}"\n"$(printc "GPU" $gpu_name $colour)
+    info=${info}"\n"$(printc "Resolution" $screen0_resolution $colour)
 
     if [[ -n $XDG_CURRENT_DESKTOP ]]; then
-        rhs=${rhs}"\n"$(printc "DM" $XDG_CURRENT_DESKTOP $colour)
+        info=${info}"\n"$(printc "DM" $XDG_CURRENT_DESKTOP $colour)
     fi
 
-    rhs=${rhs}"\n"$(printc "WM" $window_manager $colour)
+    info=${info}"\n"$(printc "WM" $window_manager $colour)
 fi
 
-if [[ -n $lhs ]] && [[ -f $lhs ]]; then
-    lhs=$(cat $lhs)
-    while [[ -n $lhs ]] || [[ -n $rhs ]]; do
-        if [[ -n $skip ]] && [[ $skip -ge 1 ]]; then
-            skip=$(echo "$skip-1" | bc)
-            l=$(echo $lhs | head -n1)
+if [[ -x /usr/share/screenfetch ]]; then
+    art=$(. $arg)
+fi
+
+if [[ -x $HOME/.screenfetch ]]; then
+    art=$(. $arg)
+fi
+
+if [[ -x $art ]]; then
+    art=$(. $arg)
+fi
+
+if [[ $portrait -eq 1 ]]; then
+    print -P $art
+    print -P $info
+elif [[ $artonly -eq 1 ]]; then
+    print -P $art
+elif [[ $noart -eq 0 ]]; then
+    while [[ -n $art ]] || [[ -n $info ]]; do
+        if [[ -n $y ]] && [[ $y -ge 1 ]]; then
+            y=$(($y-1))
+            l=$(echo $art | head -n1)
             print -P $l
             # remove first line
-            lhs=$(echo $lhs | tail -n$(echo "$(echo $lhs | wc -l)-1" | bc))
+            art=$(echo $art | tail -n$(($(echo $art | wc -l)-1)))
         else
-            l=$(echo $lhs | head -n1)
-            r=$(echo $rhs | head -n1)
+            l=$(echo $art | head -n1)
+            r=$(echo $info | head -n1)
             print -P $l $r
             # remove first line
-            lhs=$(echo $lhs | tail -n$(echo "$(echo $lhs | wc -l)-1" | bc))
-            rhs=$(echo $rhs | tail -n$(echo "$(echo $rhs | wc -l)-1" | bc))
+            info=$(echo $info | tail -n$(($(echo $info | wc -l)-1)))
+            art=$(echo $art | tail -n$(($(echo $art | wc -l)-1)))
         fi
     done
 else
-    print -P $rhs
+    print -P $info
+fi
+
+if [[ $screenshot -eq 1 ]]; then
+    SH_WORD_SPLIT=1
+    exec $screenshotutil
 fi
