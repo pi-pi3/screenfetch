@@ -42,6 +42,14 @@ printc() {
     fi
 }
 
+rep() {
+    if [[ $1 -le 0 ]]; then
+        return
+    fi
+
+    for i in {1..$1}; do print -n $2; done
+}
+
 # TODO
 verbose=0
 
@@ -152,44 +160,43 @@ if [[ -n $DISPLAY ]]; then
 fi
 
 if [[ -x /usr/share/screenfetch ]]; then
-    art=$(. $arg)
+    art=$(. $art)
 fi
 
 if [[ -x $HOME/.screenfetch ]]; then
-    art=$(. $arg)
+    art=$(. $art)
 fi
 
 if [[ -x $art ]]; then
-    art=$(. $arg)
+    art=$(. $art)
+fi
+
+# remove all modifiers, like %B and $F{yellow}
+x=$(print $art | sed 's/%\w\({[^}]*}\)\{0,1\}//g' | wc -L)
+x=$(($x+1))
+
+if [[ -n $y ]] && [[ $y -le -1 ]]; then
+    y=$((0 - $y))
+    art="$(rep $y "$(rep $(($x-1)) ' ')\n")\n$art"
+elif [[ -n $y ]] && [[ $y -ge 1 ]]; then
+    info="$(rep $y "\n")\n$info"
 fi
 
 if [[ $portrait -eq 1 ]]; then
     print -P $art
+    print $(rep $y "\n")
     print -P $info
 elif [[ $artonly -eq 1 ]]; then
     print -P $art
 elif [[ $noart -eq 0 ]]; then
     while [[ -n $art ]] || [[ -n $info ]]; do
-        if [[ -n $y ]] && [[ $y -le -1 ]]; then
-            y=$(($y+1))
-            r=$(echo $info | head -n1)
-            print -P $r
-            # remove first line
-            info=$(echo $info | tail -n$(($(echo $info | wc -l)-1)))
-        elif [[ -n $y ]] && [[ $y -ge 1 ]]; then
-            y=$(($y-1))
-            l=$(echo $art | head -n1)
-            print -P $l
-            # remove first line
-            art=$(echo $art | tail -n$(($(echo $art | wc -l)-1)))
-        else
-            l=$(echo $art | head -n1)
-            r=$(echo $info | head -n1)
-            print -P $l $r
-            # remove first line
-            info=$(echo $info | tail -n$(($(echo $info | wc -l)-1)))
-            art=$(echo $art | tail -n$(($(echo $art | wc -l)-1)))
-        fi
+        l=$(echo $art | head -n1)
+        r=$(echo $info | head -n1)
+        off=$(($x-$(print $l | sed 's/%\w\({[^}]*}\)\{0,1\}//g' | wc -m)))
+        print -P "$l$(rep $off ' ') $r"
+        # remove first line
+        info=$(echo $info | tail -n$(($(echo $info | wc -l)-1)))
+        art=$(echo $art | tail -n$(($(echo $art | wc -l)-1)))
     done
 else
     print -P $info
