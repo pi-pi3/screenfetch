@@ -170,7 +170,13 @@ elif [[ $artonly -eq 1 ]]; then
     print -P $art
 elif [[ $noart -eq 0 ]]; then
     while [[ -n $art ]] || [[ -n $info ]]; do
-        if [[ -n $y ]] && [[ $y -ge 1 ]]; then
+        if [[ -n $y ]] && [[ $y -le -1 ]]; then
+            y=$(($y+1))
+            r=$(echo $info | head -n1)
+            print -P $r
+            # remove first line
+            info=$(echo $info | tail -n$(($(echo $info | wc -l)-1)))
+        elif [[ -n $y ]] && [[ $y -ge 1 ]]; then
             y=$(($y-1))
             l=$(echo $art | head -n1)
             print -P $l
