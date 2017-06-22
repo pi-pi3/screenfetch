@@ -31,6 +31,14 @@ version() {
     exit 1
 }
 
+printv() {
+    if [[ $1 = '-n' ]]; then
+        [[ $verbose -eq 1 ]] && print -nP "%F{$colour}::%f" $2
+    else
+        [[ $verbose -eq 1 ]] && print -P $1
+    fi
+}
+
 printc() {
     label=$1
     text=$2
@@ -54,7 +62,6 @@ lower() {
     print ${(L)1}
 }
 
-# TODO
 verbose=0
 
 nocolour=0
@@ -125,19 +132,43 @@ while getopts "a:O:c:y:S:nNLwpshVv" arg; do
 done
 
 if [[ -z $os_name ]]; then
+    printv -n "Finding OS..."
     os_name=$(uname -o)
+    printv "found as '$os_name'"
+
     if [ -f /etc/lsb-release ] && [ $(lower $(uname)) = 'linux' ]; then
+        printv -n "Finding Distro..."
         distro=$(cat /etc/lsb-release | grep "DESCRIPTION" | sed 's/DISTRIB_DESCRIPTION="\(.*\)"/\1/')
+        printv "found as '$distro'"
     fi
 fi
+
+printv -n "Finding Kernel..."
 kernel_name=$(print $CPUTYPE $(uname -sr))
+printv "found as '$kernel_name'"
+
+printv -n "Finding Uptime..."
 uptime=$(uptime | sed 's/.*up\ *\([^,]*\),.*/\1/')
+printv "found as '$uptime'"
+
+printv -n "Finding Packages..."
 packages=$(pacman -Q | wc -l)
+printv "found as '$packages'"
+
+printv -n "Finding Shell..."
 shell=$($SHELL --version)
+printv "found as '$shell'"
 
+
+printv -n "Finding cpu name..."
 cpu_name=$(cat /proc/cpuinfo | grep -i -e 'model name' | head -n1 | sed 's/model name\s*:\s*\(.*\)\ *@.*/\1/')
-cpu_cores=$(cat /proc/cpuinfo | grep -i -e 'processor' | wc -l)
+printv "found as '$cpu_name'"
 
+printv -n "Finding cpu cores..."
+cpu_cores=$(cat /proc/cpuinfo | grep -i -e 'processor' | wc -l)
+printv "found as '$cpu_cores'"
+
+printv -n "Finding cpu frequency..."
 # if /sys/devices/.../cpuinfo_max_freq is available, we query it, because it's the maximum frequency
 if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq ]]; then
     cpu_freq=$(cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq)
@@ -149,11 +180,30 @@ else
     # MHz to GHz
     cpu_freq=$(awk "BEGIN { print $cpu_freq/1000; exit }")
 fi
+printv "found as '${cpu_freq}GHz'"
 
 # temperature taken from the first core only
+printv -n "Finding cpu temperature..."
 cpu_temp=$(sensors | grep -i -e 'Core 0' | head -n1 | sed 's/Core 0:[^0-9]*+\([^CF]*\(C\|F\)\).*/\1/')
+printv "found as '$cpu_temp'"
 
+printv -n "Finding memory..."
 memory=$(free -m | head -n2 | tail -n1 | sed 's/Mem:\s*\(\w*\)\s*\(\w*\).*/\2MiB \/ \1MiB/')
+printv "found as '$memory'"
+
+if [[ -n $DISPLAY ]]; then
+    printv -n "Finding gpu_name..."
+    gpu_name=$(glxinfo | grep -i -e 'OpenGL renderer string' | sed 's/OpenGL renderer string:\s*//')
+    printv "found as '$gpu_name'"
+
+    printv -n "Finding screen0_resolution..."
+    screen0_resolution=$(xrandr | head -n1 | sed 's/.*current \(.*x.*\),.*/\1/')
+    printv "found as '$screen0_resolution'"
+
+    printv -n "Finding window_manager..."
+    window_manager=$(xprop -root -notype | grep -i -e '^_NET_WM_NAME' | sed 's/_NET_WM_NAME = "\(.*\)"/\1/')
+    printv "found as '$window_manager'"
+fi
 
 info=''
 
@@ -175,10 +225,6 @@ info=${info}"\n"$(printc "CPU" "$cpu_name @ ${cpu_cores}x${cpu_freq}GHz [$cpu_te
 info=${info}"\n"$(printc "RAM" $memory $colour)
 
 if [[ -n $DISPLAY ]]; then
-    gpu_name=$(glxinfo | grep -i -e 'OpenGL renderer string' | sed 's/OpenGL renderer string:\s*//')
-    screen0_resolution=$(xrandr | head -n1 | sed 's/.*current \(.*x.*\),.*/\1/')
-    window_manager=$(xprop -root -notype | grep -i -e '^_NET_WM_NAME' | sed 's/_NET_WM_NAME = "\(.*\)"/\1/')
-
     info=${info}"\n"$(printc "GPU" $gpu_name $colour)
     info=${info}"\n"$(printc "Resolution" $screen0_resolution $colour)
 
