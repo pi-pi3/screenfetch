@@ -50,6 +50,10 @@ rep() {
     for i in {1..$1}; do print -n $2; done
 }
 
+lower() {
+    print ${(L)1}
+}
+
 # TODO
 verbose=0
 
@@ -62,7 +66,19 @@ portrait=0
 screenshotutil='scrot'
 colour='yellow'
 infcolour=''
+defaultart=1
 art='%B%F{yellow}GNU/Linux mah freedo%f%b
+%B%F{yellow}m GNU/Linux mah free%f%b
+%B%F{yellow}dom GNU/Linux mah fr%f%b
+%B%F{yellow}eedom GNU/Linux mah %f%b
+%B%F{yellow}freedom GNU/Linux ma%f%b
+%B%F{yellow}h freedom GNU/Linux %f%b
+%B%F{yellow}mah freedom GNU/Linu%f%b
+%B%F{yellow}x mah freedom GNU/Li%f%b
+%B%F{yellow}nux mah freedom GNU/%f%b
+%B%F{yellow}Linux mah freedom GN%f%b
+%B%F{yellow}U/Linux mah freedom %f%b
+%B%F{yellow}GNU/Linux mah freedo%f%b
 %B%F{yellow}m GNU/Linux mah free%f%b
 %B%F{yellow}dom GNU/Linux mah fr%f%b
 %B%F{yellow}eedom GNU/Linux mah %f%b
@@ -95,6 +111,7 @@ while getopts "a:O:c:y:S:nNLwpshVv" arg; do
         S)
             screenshotutil=$OPTARG;;
         a)
+            defaultart=0
             art=$OPTARG;;
         O)
             os_name=$OPTARG;;
@@ -107,8 +124,11 @@ while getopts "a:O:c:y:S:nNLwpshVv" arg; do
     esac
 done
 
-if [ -z $os_name ]; then
+if [[ -z $os_name ]]; then
     os_name=$(uname -o)
+    if [ -f /etc/lsb-release ] && [ $(lower $(uname)) = 'linux' ]; then
+        distro=$(cat /etc/lsb-release | grep "DESCRIPTION" | sed 's/DISTRIB_DESCRIPTION="\(.*\)"/\1/')
+    fi
 fi
 kernel_name=$(print $CPUTYPE $(uname -sr))
 uptime=$(uptime | sed 's/.*up\ *\([^,]*\),.*/\1/')
@@ -118,10 +138,17 @@ shell=$($SHELL --version)
 cpu_name=$(cat /proc/cpuinfo | grep -i -e 'model name' | head -n1 | sed 's/model name\s*:\s*\(.*\)\ *@.*/\1/')
 cpu_cores=$(cat /proc/cpuinfo | grep -i -e 'processor' | wc -l)
 
-# frequency taken from the first core only
-cpu_freq=$(cat /proc/cpuinfo | grep -i -e 'cpu MHz' | head -n1 | sed 's/cpu MHz\s*:\s*\(.*\)/\1/')
-# MHz to GHz
-cpu_freq=$(print "scale=1; $cpu_freq/1000" | bc)
+# if /sys/devices/.../cpuinfo_max_freq is available, we query it, because it's the maximum frequency
+if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq ]]; then
+    cpu_freq=$(cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq)
+    # kHz to GHz
+    cpu_freq=$(awk "BEGIN { print $cpu_freq/1000000; exit }")
+else
+    # frequency taken from the first core only
+    cpu_freq=$(cat /proc/cpuinfo | grep -i -e 'cpu MHz' | head -n1 | sed 's/cpu MHz\s*:\s*\(.*\)/\1/')
+    # MHz to GHz
+    cpu_freq=$(awk "BEGIN { print $cpu_freq/1000; exit }")
+fi
 
 # temperature taken from the first core only
 cpu_temp=$(sensors | grep -i -e 'Core 0' | head -n1 | sed 's/Core 0:[^0-9]*+\([^CF]*\(C\|F\)\).*/\1/')
@@ -136,6 +163,9 @@ else
     info=${info}"$USER@$HOST"
 fi
 info=${info}"\n"$(printc "OS" $os_name $colour)
+if [[ -n $distro ]]; then
+    info=${info}"\n"$(printc "Distro" $distro $colour)
+fi
 info=${info}"\n"$(printc "Kernel" $kernel_name $colour)
 info=${info}"\n"$(printc "Uptime" $uptime $colour)
 info=${info}"\n"$(printc "Packages" $packages $colour)
@@ -160,14 +190,17 @@ if [[ -n $DISPLAY ]]; then
 fi
 
 if [[ -x /usr/share/screenfetch ]]; then
+    defaultart=0
     art=$(. $art)
 fi
 
 if [[ -x $HOME/.screenfetch ]]; then
+    defaultart=0
     art=$(. $art)
 fi
 
 if [[ -x $art ]]; then
+    defaultart=0
     art=$(. $art)
 fi
 
@@ -197,6 +230,8 @@ elif [[ $noart -eq 0 ]]; then
         # remove first line
         info=$(echo $info | tail -n$(($(echo $info | wc -l)-1)))
         art=$(echo $art | tail -n$(($(echo $art | wc -l)-1)))
+
+        [[ $defaultart -eq 1 ]] && [[ -z $info ]] && break
     done
 else
     print -P $info
