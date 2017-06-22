@@ -31,8 +31,10 @@ deps() {
         exit 1
     fi
 
-    echo "lsb-release is an optional dependency on Linux"
-    echo "It will allow screenfetch to show your distro"
+    if [[ ! -f /etc/lsb-release ]]; then
+        echo "lsb-release is an optional dependency on Linux"
+        echo "It will allow screenfetch to show your distro"
+    fi
 }
 
 install() {
