@@ -156,19 +156,19 @@ packages=$(pacman -Q | wc -l)
 printv "found as '$packages'"
 
 printv -n "Finding Shell..."
-shell=$($SHELL --version)
+shell="$(echo $SHELL | sed 's/.*\///') $($SHELL --version | grep '[0-9]\+\(\.[0-9]\+\)*' | head -n1 | sed 's/[^0-9]*\([0-9]\+\(\.[0-9]\+\)*\).*/\1/')"
 printv "found as '$shell'"
 
 
-printv -n "Finding cpu name..."
+printv -n "Finding CPU name..."
 cpu_name=$(cat /proc/cpuinfo | grep -i -e 'model name' | head -n1 | sed 's/model name\s*:\s*\(.*\)\ *@.*/\1/')
 printv "found as '$cpu_name'"
 
-printv -n "Finding cpu cores..."
+printv -n "Finding CPU cores..."
 cpu_cores=$(cat /proc/cpuinfo | grep -i -e 'processor' | wc -l)
 printv "found as '$cpu_cores'"
 
-printv -n "Finding cpu frequency..."
+printv -n "Finding CPU frequency..."
 # if /sys/devices/.../cpuinfo_max_freq is available, we query it, because it's the maximum frequency
 if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq ]]; then
     cpu_freq=$(cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq)
@@ -183,7 +183,7 @@ fi
 printv "found as '${cpu_freq}GHz'"
 
 # temperature taken from the first core only
-printv -n "Finding cpu temperature..."
+printv -n "Finding CPU temperature..."
 cpu_temp=$(sensors | grep -i -e 'Core 0' | head -n1 | sed 's/Core 0:[^0-9]*+\([^CF]*\(C\|F\)\).*/\1/')
 printv "found as '$cpu_temp'"
 
@@ -192,15 +192,15 @@ memory=$(free -m | head -n2 | tail -n1 | sed 's/Mem:\s*\(\w*\)\s*\(\w*\).*/\2MiB
 printv "found as '$memory'"
 
 if [[ -n $DISPLAY ]]; then
-    printv -n "Finding gpu_name..."
+    printv -n "Finding GPU name..."
     gpu_name=$(glxinfo | grep -i -e 'OpenGL renderer string' | sed 's/OpenGL renderer string:\s*//')
     printv "found as '$gpu_name'"
 
-    printv -n "Finding screen0_resolution..."
+    printv -n "Finding screen resolution..."
     screen0_resolution=$(xrandr | head -n1 | sed 's/.*current \(.*x.*\),.*/\1/')
     printv "found as '$screen0_resolution'"
 
-    printv -n "Finding window_manager..."
+    printv -n "Finding window manager..."
     window_manager=$(xprop -root -notype | grep -i -e '^_NET_WM_NAME' | sed 's/_NET_WM_NAME = "\(.*\)"/\1/')
     printv "found as '$window_manager'"
 fi
