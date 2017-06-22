@@ -191,18 +191,29 @@ printv -n "Finding memory..."
 memory=$(free -m | head -n2 | tail -n1 | sed 's/Mem:\s*\(\w*\)\s*\(\w*\).*/\2MiB \/ \1MiB/')
 printv "found as '$memory'"
 
+printv -n "Finding GPU..."
 if [[ -n $DISPLAY ]]; then
-    printv -n "Finding GPU name..."
+    printv "found as:"
+    printv -n "  Finding GPU name..."
     gpu_name=$(glxinfo | grep -i -e 'OpenGL renderer string' | sed 's/OpenGL renderer string:\s*//')
     printv "found as '$gpu_name'"
 
-    printv -n "Finding screen resolution..."
+    printv -n "  Finding screen resolution..."
     screen0_resolution=$(xrandr | head -n1 | sed 's/.*current \(.*x.*\),.*/\1/')
     printv "found as '$screen0_resolution'"
 
-    printv -n "Finding window manager..."
+    printv -n "  Finding window manager..."
     window_manager=$(xprop -root -notype | grep -i -e '^_NET_WM_NAME' | sed 's/_NET_WM_NAME = "\(.*\)"/\1/')
     printv "found as '$window_manager'"
+
+    printv -n "  Finding desktop environment..."
+    if [[ -n $XDG_CURRENT_DESKTOP ]]; then
+        printv "found as '$XDG_CURRENT_DESKTOP'"
+    else
+        printv "not found"
+    fi
+else
+    printv "not found"
 fi
 
 info=''
