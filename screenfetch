@@ -256,7 +256,9 @@ if [[ -x $HOME/.screenfetch ]]; then
     art=$(. $art)
 fi
 
-if [[ -x $art ]]; then
+if [[ $art = '-' ]]; then
+    read art
+elif [[ -x $art ]]; then
     defaultart=0
     art=$(. $art)
 fi
