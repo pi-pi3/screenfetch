@@ -30,6 +30,9 @@ deps() {
         echo "zsh wmctrl lm_sensors bc [xorg-xprop]"
         exit 1
     fi
+
+    echo "lsb_release is an optional dependency on Linux"
+    echo "It will allow screenfetch to show your distro"
 }
 
 install() {
