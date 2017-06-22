@@ -257,7 +257,10 @@ if [[ -x $HOME/.screenfetch ]]; then
 fi
 
 if [[ $art = '-' ]]; then
-    read art
+    art=''
+    while IFS='' read -r line; do
+        art="$art$line \n"
+    done
 elif [[ -x $art ]]; then
     defaultart=0
     art=$(. $art)
@@ -284,8 +287,9 @@ elif [[ $noart -eq 0 ]]; then
     while [[ -n $art ]] || [[ -n $info ]]; do
         l=$(echo $art | head -n1)
         r=$(echo $info | head -n1)
-        off=$(($x-$(print $l | sed 's/%\w\({[^}]*}\)\{0,1\}//g' | wc -m)))
-        print -P "$l$(rep $off ' ') $r"
+        off=$(($x-$(print -nR $l | sed 's/%\w\({[^}]*}\)\{0,1\}//g' | wc -m)))
+        print -nRP " $l"
+        print -P "$(rep $off ' ') $r"
         # remove first line
         info=$(echo $info | tail -n$(($(echo $info | wc -l)-1)))
         art=$(echo $art | tail -n$(($(echo $art | wc -l)-1)))
